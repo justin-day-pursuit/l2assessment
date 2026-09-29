@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import ApiSourceBadge from '../components/ApiSourceBadge'
 
 function HomePage() {
   const [stats, setStats] = useState({ total: 0, today: 0 })
@@ -107,7 +108,7 @@ function HomePage() {
                       <div className="text-gray-700 truncate">
                         "{item.message.substring(0, 60)}..."
                       </div>
-                      <div className="flex items-center space-x-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                           {item.category}
                         </span>
@@ -118,6 +119,7 @@ function HomePage() {
                         }`}>
                           {item.urgency}
                         </span>
+                        <ApiSourceBadge api={item.api} />
                       </div>
                     </div>
                   </div>

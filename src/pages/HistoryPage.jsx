@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import ApiSourceBadge from '../components/ApiSourceBadge'
 
 function HistoryPage() {
   const [history, setHistory] = useState([])
@@ -116,7 +117,7 @@ function HistoryPage() {
                     <div className="text-gray-800 font-medium mb-2">
                       "{item.message.substring(0, 100)}{item.message.length > 100 ? '...' : ''}"
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold">
                         {item.category}
                       </span>
@@ -127,6 +128,7 @@ function HistoryPage() {
                       }`}>
                         {item.urgency} Urgency
                       </span>
+                      <ApiSourceBadge api={item.api} />
                     </div>
                   </div>
                   <div className="text-gray-400 ml-4">
@@ -150,6 +152,14 @@ function HistoryPage() {
                         {item.recommendedAction}
                       </div>
                     </div>
+                    {item.api?.source === 'fallback' && item.api.error && (
+                      <div>
+                        <div className="text-xs font-semibold text-gray-600 mb-1">API status</div>
+                        <div className="text-sm text-amber-900 bg-amber-50 p-3 rounded border border-amber-200">
+                          Groq request failed: {item.api.error}. Using built-in keyword categorization.
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <div className="text-xs font-semibold text-gray-600 mb-1">AI Reasoning</div>
                       <div className="bg-white p-3 rounded border border-gray-200">

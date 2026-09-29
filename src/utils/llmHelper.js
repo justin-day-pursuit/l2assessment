@@ -32,11 +32,20 @@ async function resolveCategorizationModel() {
  * Categorize a customer support message using Groq AI
  * 
  * @param {string} message - The customer support message
- * @returns {Promise<{category: string, reasoning: string}>}
+ * @param {(status: {phase: string, source: string|null, model: string|null, error: string|null}) => void} [onStatus]
+ * @returns {Promise<{category: string, reasoning: string, api: {source: string, model: string|null, error: string|null}}>}
  */
-export async function categorizeMessage(message) {
+export async function categorizeMessage(message, onStatus = () => {}) {
+  let model = null
+
   try {
-    const model = await resolveCategorizationModel()
+    if (!cachedModelId) {
+      onStatus({ phase: 'listing', source: null, model: null, error: null })
+    }
+
+    model = await resolveCategorizationModel()
+    onStatus({ phase: 'categorizing', source: null, model, error: null })
+
     const response = await groq.chat.completions.create({
       model,
       messages: [
@@ -77,14 +86,21 @@ ${message}`
     }
 
     if (!category) category = "Unknown"
-    
+
+    const api = { source: 'groq', model, error: null }
+    onStatus({ phase: 'success', ...api })
+
     return {
       category,
-      reasoning: content
+      reasoning: content,
+      api
     };
   } catch (error) {
     console.warn('Groq API failed, using mock response:', error.message);
-    return getMockCategorization(message);
+    const fallback = getMockCategorization(message)
+    const api = { source: 'fallback', model, error: error.message }
+    onStatus({ phase: 'fallback', ...api })
+    return { ...fallback, api }
   }
 }
 
