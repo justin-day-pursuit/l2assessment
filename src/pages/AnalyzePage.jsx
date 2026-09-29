@@ -4,10 +4,22 @@ import { categorizeMessage } from '../utils/llmHelper'
 import { calculateUrgency } from '../utils/urgencyScorer'
 import { getRecommendedAction } from '../utils/templates'
 
+function apiStatusMessage(status) {
+  if (!status) return ''
+  if (status.phase === 'listing') return 'Calling Groq to list models…'
+  if (status.phase === 'categorizing') return `Calling Groq model ${status.model}…`
+  if (status.phase === 'success') return `Groq succeeded with ${status.model}.`
+  if (status.phase === 'fallback') {
+    return `Groq request failed: ${status.error}. Using built-in keyword categorization.`
+  }
+  return ''
+}
+
 function AnalyzePage() {
   const [message, setMessage] = useState('')
   const [results, setResults] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [apiStatus, setApiStatus] = useState(null)
 
   useEffect(() => {
     // Check for example message from home page
@@ -26,10 +38,11 @@ function AnalyzePage() {
 
     setIsLoading(true)
     setResults(null)
+    setApiStatus(null)
     
     try {
       // Run categorization (LLM call)
-      const { category, reasoning } = await categorizeMessage(message)
+      const { category, reasoning, api } = await categorizeMessage(message, setApiStatus)
       
       // Calculate urgency (rule-based)
       const urgency = calculateUrgency(message)
@@ -43,6 +56,7 @@ function AnalyzePage() {
         urgency,
         recommendedAction,
         reasoning,
+        api,
         timestamp: new Date().toISOString()
       }
 
@@ -63,6 +77,7 @@ function AnalyzePage() {
   const handleClear = () => {
     setMessage('')
     setResults(null)
+    setApiStatus(null)
   }
 
   return (
@@ -122,6 +137,27 @@ function AnalyzePage() {
               Clear
             </button>
           </div>
+
+          {apiStatus && (
+            <div
+              className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${
+                apiStatus.phase === 'success'
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : apiStatus.phase === 'fallback'
+                    ? 'bg-amber-50 border-amber-200 text-amber-900'
+                    : 'bg-blue-50 border-blue-200 text-blue-800'
+              }`}
+              role="status"
+            >
+              {(apiStatus.phase === 'listing' || apiStatus.phase === 'categorizing') && (
+                <svg className="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              {apiStatusMessage(apiStatus)}
+            </div>
+          )}
         </div>
 
         {/* Results Section */}
@@ -170,7 +206,12 @@ function AnalyzePage() {
             <div className="mt-6 pt-4 border-t border-gray-200">
               <button
                 onClick={() => {
-                  const text = `Category: ${results.category}\nUrgency: ${results.urgency}\nRecommendation: ${results.recommendedAction}\n\nReasoning: ${results.reasoning}`
+                  const apiLine = results.api?.source === 'groq'
+                    ? `API: Groq succeeded with ${results.api.model}`
+                    : results.api?.source === 'fallback'
+                      ? `API: Groq request failed. Using built-in keyword categorization.`
+                      : ''
+                  const text = `Category: ${results.category}\nUrgency: ${results.urgency}\nRecommendation: ${results.recommendedAction}${apiLine ? `\n${apiLine}` : ''}\n\nReasoning: ${results.reasoning}`
                   navigator.clipboard.writeText(text)
                   alert('Results copied to clipboard!')
                 }}
