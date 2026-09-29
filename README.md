@@ -11,7 +11,7 @@ Support teams waste time manually reading and triaging customer messages. This t
 ## Tech Stack
 
 - **Frontend**: React + Vite + Tailwind CSS
-- **AI**: Groq API (Llama 3.3 70B - Free tier)
+- **AI**: Groq API (reasoning model with the most available tokens)
 - **Runtime**: Browser-based (local development only)
 
 ## Setup Instructions
@@ -63,7 +63,7 @@ Support teams waste time manually reading and triaging customer messages. This t
 1. **Paste Message**: User pastes a customer support message into the text area
 2. **Analyze**: Click "Analyze Message" to process the input
 3. **Classification**: The app runs three processes in parallel:
-   - **Category Classification** (LLM): Uses Groq AI (Llama 3.3 70B) to categorize the message
+   - **Category Classification** (LLM): Asks Groq which models this key can call, then categorizes with the reasoning model that has the most available tokens
    - **Urgency Scoring** (Rule-based): Applies simple rules to determine urgency
    - **Recommendation** (Template-based): Maps category to a recommended action
 4. **Display Results**: Shows category, urgency tag, recommended action, and AI reasoning
@@ -113,7 +113,7 @@ The dashboard won't load when I try to access it. I've tried refreshing but it k
 - ✅ **Completely Free** - No credit card required
 - ✅ **Fast Inference** - Groq's LPU technology is incredibly fast
 - ✅ **Generous Limits** - ~14,400 requests/day on free tier
-- ✅ **High Quality** - Llama 3.3 70B performs excellently
+- ✅ **High Quality** - Open reasoning models on the free tier
 - ✅ **Easy Signup** - Get started in minutes at https://console.groq.com
 
 ## License

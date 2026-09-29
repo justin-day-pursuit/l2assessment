@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import { selectReasoningModelWithMostTokens } from './modelSelection.js';
 
 /**
  * LLM Helper for categorizing customer support messages
@@ -11,6 +12,22 @@ const groq = new Groq({
   dangerouslyAllowBrowser: true // Required for browser-based calls (not recommended for production!)
 });
 
+let cachedModelId = null
+
+async function resolveCategorizationModel() {
+  if (cachedModelId) return cachedModelId
+
+  const listing = await groq.models.list()
+  const selected = selectReasoningModelWithMostTokens(listing.data)
+  if (!selected) {
+    throw new Error('No reasoning model is available for this Groq API key')
+  }
+
+  cachedModelId = selected.id
+  console.info(`Using Groq model ${cachedModelId}`)
+  return cachedModelId
+}
+
 /**
  * Categorize a customer support message using Groq AI
  * 
@@ -19,32 +36,47 @@ const groq = new Groq({
  */
 export async function categorizeMessage(message) {
   try {
+    const model = await resolveCategorizationModel()
     const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model,
       messages: [
         {
           role: "user",
-          content: `Categorize this customer support message: ${message}`
+          content: `Classify the customer support message below.
+Reply with one category on the first line, using exactly one of these labels:
+Billing Issue
+Technical Problem
+Feature Request
+General Inquiry
+Then add a short explanation.
+
+Message:
+${message}`
         }
       ],
       temperature: 0.7,
+      max_tokens: 512,
     });
 
-    const content = response.choices[0].message.content;
+    const choice = response.choices[0].message
+    const content = (choice.content || choice.reasoning || '').trim();
     
-    const lines = content.split('\n');
-    let category = "Unknown";
-    let reasoning = content;
-    
-    if (content.toLowerCase().includes('billing')) {
+    const lines = content.split('\n').map((line) => line.trim()).filter(Boolean)
+    const firstLine = (lines[0] || '').replace(/^[^A-Za-z]+/, '')
+    const knownCategories = ['Billing Issue', 'Technical Problem', 'Feature Request', 'General Inquiry']
+    let category = knownCategories.find((label) => firstLine.toLowerCase().startsWith(label.toLowerCase()))
+
+    if (!category && content.toLowerCase().includes('billing')) {
       category = "Billing Issue";
-    } else if (content.toLowerCase().includes('technical') || content.toLowerCase().includes('bug')) {
+    } else if (!category && (content.toLowerCase().includes('technical') || content.toLowerCase().includes('bug'))) {
       category = "Technical Problem";
-    } else if (content.toLowerCase().includes('feature')) {
+    } else if (!category && content.toLowerCase().includes('feature')) {
       category = "Feature Request";
-    } else if (content.toLowerCase().includes('inquiry') || content.toLowerCase().includes('question')) {
+    } else if (!category && (content.toLowerCase().includes('inquiry') || content.toLowerCase().includes('question'))) {
       category = "General Inquiry";
     }
+
+    if (!category) category = "Unknown"
     
     return {
       category,
