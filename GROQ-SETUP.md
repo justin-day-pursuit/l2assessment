@@ -5,7 +5,7 @@
 ✅ **Completely Free** - No credit card required  
 ✅ **Fast** - Groq's LPU technology provides incredibly fast inference  
 ✅ **Generous Limits** - ~14,400 requests/day on free tier  
-✅ **High Quality** - Llama 3.3 70B model performs excellently  
+✅ **High Quality** - Open reasoning models on the free tier  
 
 ## Step-by-Step Setup
 
@@ -100,11 +100,7 @@ Groq's free tier includes:
 
 - **~14,400 requests per day**
 - **30 requests per minute**
-- Access to multiple models including:
-  - Llama 3.3 70B (what this app uses)
-  - Llama 3.1 8B
-  - Mixtral 8x7B
-  - Gemma 2 9B
+- Access to the models enabled for your key. This app lists those models and uses the reasoning model with the most available tokens.
 
 This is more than enough for development and testing!
 
