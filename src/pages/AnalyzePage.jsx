@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { categorizeMessage } from '../utils/llmHelper'
 import { calculateUrgency } from '../utils/urgencyScorer'
-import { getRecommendedAction } from '../utils/templates'
+import { getRecommendedAction, shouldEscalate } from '../utils/templates'
 
 function apiStatusMessage(status) {
   if (!status) return ''
@@ -41,20 +41,24 @@ function AnalyzePage() {
     setApiStatus(null)
     
     try {
-      // Run categorization (LLM call)
+      // Run categorization (LLM call with structured JSON output)
       const { category, reasoning, api } = await categorizeMessage(message, setApiStatus)
       
       // Calculate urgency (rule-based)
       const urgency = calculateUrgency(message)
       
-      // Get recommended action (template-based)
-      const recommendedAction = getRecommendedAction(category)
+      // Get recommended action (urgency-aware template routing)
+      const recommendedAction = getRecommendedAction(category, urgency)
+
+      // Evaluate whether the ticket requires management/incident escalation
+      const escalated = shouldEscalate(category, urgency, message)
       
       const analysisResult = {
         message,
         category,
         urgency,
         recommendedAction,
+        escalated,
         reasoning,
         api,
         timestamp: new Date().toISOString()
@@ -185,6 +189,17 @@ function AnalyzePage() {
               </div>
 
               <div>
+                <div className="text-sm font-semibold text-gray-600 mb-1">Escalation Status</div>
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${
+                  results.escalated
+                    ? 'bg-red-100 text-red-800 border border-red-300'
+                    : 'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  {results.escalated ? '🚨 Immediate Escalation Required' : '✅ Standard Queue'}
+                </div>
+              </div>
+
+              <div>
                 <div className="text-sm font-semibold text-gray-600 mb-1">Recommended Action</div>
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <p className="text-gray-800">{results.recommendedAction}</p>
@@ -211,7 +226,7 @@ function AnalyzePage() {
                     : results.api?.source === 'fallback'
                       ? `API: Groq request failed. Using built-in keyword categorization.`
                       : ''
-                  const text = `Category: ${results.category}\nUrgency: ${results.urgency}\nRecommendation: ${results.recommendedAction}${apiLine ? `\n${apiLine}` : ''}\n\nReasoning: ${results.reasoning}`
+                  const text = `Category: ${results.category}\nUrgency: ${results.urgency}\nEscalation: ${results.escalated ? 'Immediate Escalation Required' : 'Standard Queue'}\nRecommendation: ${results.recommendedAction}${apiLine ? `\n${apiLine}` : ''}\n\nReasoning: ${results.reasoning}`
                   navigator.clipboard.writeText(text)
                   alert('Results copied to clipboard!')
                 }}
